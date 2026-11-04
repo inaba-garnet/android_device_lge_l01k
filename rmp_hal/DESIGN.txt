@@ -1,0 +1,75 @@
+RMP producer の vendor AIDL HAL 化 設計（2026-11-04、#A境界の正規化）
+
+目的
+  現状 player(system, coredomain) が rf_secure(vendor) を posix_spawn で exec し、
+  frame_ipc socket と secure buffer FD を直接受け渡していた。これは system↔vendor の直結で、
+  Treble の型可視性に反し sepolicy がコンパイルできない(所見#A、双方向でブロック)。
+  player↔producer 間を stable AIDL HAL にし、hal_attribute(core client ⇄ vendor server) で
+  正道の binder 境界に置き換える。これで #A が根本解消し、known-violators 例外も不要。
+
+不変の境界(維持)
+  - librmp の中身・鍵・復号・TAコマンドに触れない。HAL は rmp_* を dlopen で呼ぶだけ。
+  - 保護ES payload を CPU で map/read しない。HAL が運ぶのは ES メタデータ(frame_ipc相当)と
+    secure buffer FD(native_handle)のみ。鍵/設定(bcas_keys)への権限は HAL にも付けない。
+  - clear/RAW 経路(l01ktvd + tv_owner)とは別系統。RF は rf.lock で単一所有(HAL も同一inodeを掴む)。
+
+層の整理(2段)
+  層1 APK → player        : IL01ktvProtectedPlayer / Callback（既存のまま。Surface受け渡し）。system内。
+  層2 player → producer   : ここを AIDL HAL 化（本設計）。system(client) ⇄ vendor(server)。
+  ※ 層1の Surface と secure MediaCodec は player(system)に閉じる。層2で vendor へ渡すのは
+    secure codec が確保した保護入力バッファの FD と選局情報だけ。
+
+AIDL インターフェース（package vendor.l01k.tv.rmp、@VintfStability、stability:"vintf"）
+  parcelable RmpTuneParams { int channel; int station; int ecmPid; int videoPid; int bufferSize; }
+  interface IRmpFrameCallback {            // server→client（oneway）
+    oneway void onState(in String state);            // "LOCKING" | "READY" | "STOPPED"
+    oneway void onFrameReady(int index, int offset, int length, long pts, int flags);
+    oneway void onEnded(int result);                 // result は現行 rf_secure の exit code 互換
+  }
+  interface IRmpProducer {                 // client→server
+    long start(in RmpTuneParams p, in ParcelFileDescriptor[] secureBuffers, in IRmpFrameCallback cb);
+    void ack(long sessionId, int index);             // player が消費完了→ REUSE 可
+    void stop(long sessionId);                        // 冪等。RF/KL/librmp/buffer 解放完了まで戻らない
+  }
+  対応(現行 frame_ipc → AIDL):
+    FRAME_READY(index,offset,length,pts,flags) → onFrameReady(...)
+    FRAME_ACK(index)                            → ack(sessionId,index)
+    FRAME_END(result)                           → onEnded(result)
+    --secure-fds a,b,..                         → start() の ParcelFileDescriptor[]
+    --channel/--station/--ecm-pid/--video-pid/--buffer-size → RmpTuneParams
+
+プロセス/SELinux 模型（#A の正道解消）
+  - vendor init service: l01ktv_rmp_hal（/vendor/bin/hw/ に設置）。domain hal_l01ktv_rmp_default。
+  - hal_attribute(l01ktv_rmp)
+    hal_server_domain(hal_l01ktv_rmp_default, hal_l01ktv_rmp)   # vendor server
+    hal_client_domain(l01ktv_player, hal_l01ktv_rmp)            # system client
+    → hal_attribute 経由の binder_call は core⇄vendor でも neverallow を踏まない(正道)。
+  - server(hal_l01ktv_rmp_default)に必要: broadcast_isdbt/demux/dvr rw、ion、tee_device(qseecom)、
+    librmp 実行/読取(vendor_file)、rf.lock(l01ktv_state_file lock)、self:process {getsched signal sigkill}。
+    ※ 試験結線で tee_device/ion/demux 等は neverallow 違反なしを確認済み(所見clean)。
+    ※ bcas_keys(l01ktv_config_file)への権限は付けない。
+  - client(l01ktv_player)に必要: surfaceflinger/mediaserver find+binder、secure Surface、
+    secure MediaCodec、HAL の hwservice find。media系は所見#Bのとおり実A15型へ要修正(層1/player側)。
+  - VINTF: vendor manifest に vendor.l01k.tv.rmp/IRmpProducer/default を宣言。
+    framework/ device の compatibility matrix に追加(optional, bring-up)。
+  - FD受け渡し: ParcelFileDescriptor[] で secure buffer FD を binder 越しに渡す。HAL は dup して
+    DMX_SET_DECODER_BUFFER に使うが map/read しない(現行と同じ)。
+
+実装方針（段階）
+  S-a: AIDL interface 定義 + aidl_interface ビルド確認（本ファイルと同時に着手）。
+  S-b: rf_secure を HAL service 化。現行 rf_secure_main.c の RF/librmp/secure-demux ループを
+       IRmpProducer 実装へ移植(start で tune→ECM→KL→secure demux、受信ループは専用スレッド、
+       onFrameReady/ack で現行の FRAME_READY/REUSE を置換、stop/onEnded で解放)。CLI版 rf_secure は
+       Raw採取や単体確認用に残す。
+  S-c: player を HAL client 化。posix_spawn/frame_ipc を廃し、getService→start→callback→ack→stop。
+  S-d: sepolicy(hal_attribute)結線、VINTF、init.rc。復帰ROM/バックアップ確保後に ROM→実機AVC。
+  S-e: 実機で V2/V3/V4。
+
+移行時の後方互換
+  - frame_ipc.h と CLI rf_secure(prebuilt)は当面残す(Raw/単体試験、既存Android.bpの参照)。
+  - APK↔player(層1 AIDL)は不変。
+
+未確定(要実機/要相談)
+  - media系 client 権限の実型(所見#B)。player 起動経路(APK→AIDL)確定後に詰める。
+  - compatibility matrix を device/framework どちらに置くか(bring-up は device 側で可)。
+  - AIDL は dev 中 frozen:false。確定後に version freeze。
