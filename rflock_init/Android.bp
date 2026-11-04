@@ -1,0 +1,18 @@
+// rf.lock の初期配置(post-fs-data で一回実行)。RMP HAL / clear backend の排他契約は変えない。
+cc_binary {
+    name: "l01ktv_rflock_init",
+    vendor: true,
+    srcs: ["l01ktv_rflock_init.c"],
+    shared_libs: [
+        "liblog",
+        "libselinux",
+    ],
+    c_std: "c11",
+    cflags: [
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+    ],
+    compile_multilib: "64",
+    init_rc: ["l01ktv_rflock_init.rc"],
+}
