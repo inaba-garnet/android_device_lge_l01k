@@ -1,0 +1,9 @@
+# PROTECTED_ES client(player)。試験用に oneshot/disabled(APK 起動は Phase 2)。ログは logcat(tag l01ktv_player)。
+# `setprop ctl.start l01ktv_player` で自ドメイン(l01ktv_player)起動。将来は APK/AIDL 起動に置換。
+# 選局は env 既定(ch15 / TSID 0x7fd3 / ECM 0x61 / VIDEO 0x111 / 20s)。
+service l01ktv_player /system/bin/l01ktv_player
+    class main
+    user root
+    group system graphics media drmrpc
+    disabled
+    oneshot

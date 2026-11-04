@@ -1,0 +1,18 @@
+// PROTECTED_ES client(system)。vendor.l01k.tv.rmp HAL から保護バッファの FRAME_READY を受け、
+// secure MediaCodec + protected Surface へ投入する。正本はこのディレクトリ(../rmp_hal/SOURCES.txt)。
+cc_binary {
+    name: "l01ktv_player",
+    srcs: ["l01ktv_player.cpp"],
+    shared_libs: [
+        "libstagefright", "libstagefright_foundation", "libmedia", "libmedia_omx",
+        "libbinder", "libutils", "liblog", "libcutils", "libhidlbase",
+        "libgui", "libui", "libnativewindow",
+        "libbinder_ndk",
+    ],
+    static_libs: ["vendor.l01k.tv.rmp-V1-ndk"],
+    init_rc: ["l01ktv_player.rc"],
+    header_libs: ["libmediadrm_headers"],
+    include_dirs: ["frameworks/av/media/libstagefright/include"],
+    cflags: ["-Wall", "-Wextra", "-Werror"],
+    compile_multilib: "64",
+}
