@@ -24,3 +24,6 @@ DEVICE_MANIFEST_FILE += $(DEVICE_PATH)/manifest.xml
 
 # inherit from the proprietary version
 include vendor/lge/l01k/BoardConfigVendor.mk
+
+# ローカル開発構成(無ければ何もしない。公開ビルドでは置かない)
+-include vendor/l01k-local/BoardConfigLocal.mk

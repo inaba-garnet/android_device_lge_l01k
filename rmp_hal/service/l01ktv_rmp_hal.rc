@@ -1,0 +1,7 @@
+# PROTECTED_ES producer HAL。class hal で常駐(bring-up)。将来 lazy 起動へ。
+# user root は暫定: rf.lock(root:root 0600, clear backend と共有)を開くため。
+# rf.lock の所有/perm は Codex 配置の契約。非root化する場合は group 共有(例 root:system 0660)を要相談。
+service l01ktv_rmp_hal /vendor/bin/hw/l01ktv_rmp_hal
+    class hal
+    user root
+    group system media drmrpc

@@ -3,3 +3,6 @@
 /dev/cxd224x-i2c	                                    u:object_r:nfc_device:s0
 
 /(vendor|system/vendor)/bin/hw/vendor\.lge\.hardware\.nfc@1\.1-service	u:object_r:hal_nfc_default_exec:s0
+/data/vendor/l01ktv(/.*)?    u:object_r:l01ktv_state_file:s0
+/vendor/bin/hw/l01ktv_rmp_hal    u:object_r:hal_l01ktv_rmp_default_exec:s0
+/vendor/bin/l01ktv_rflock_init    u:object_r:l01ktv_rflock_init_exec:s0

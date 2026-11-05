@@ -1,0 +1,6 @@
+# RF 排他ロック(/data/vendor/l01ktv/rf.lock)の初期配置。無ければ root:root 0600 で作るだけで、既存は変更しない。
+# 親ディレクトリは本 rc の mkdir で作る(同じ action 内で exec より前。restorecon は非再帰で dir だけ)。
+on post-fs-data
+    mkdir /data/vendor/l01ktv 0700 root root
+    restorecon /data/vendor/l01ktv
+    exec - root root -- /vendor/bin/l01ktv_rflock_init

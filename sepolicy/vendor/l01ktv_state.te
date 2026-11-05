@@ -1,0 +1,2 @@
+# TV の状態ディレクトリ(/data/vendor/l01ktv)。RF 排他ロック rf.lock を置く。鍵・設定はここで定義しない。
+type l01ktv_state_file, file_type, data_file_type;

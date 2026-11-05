@@ -1,0 +1,28 @@
+// PROTECTED_ES producer の vendor stable AIDL HAL。player(system) ⇄ producer(vendor) 境界。
+// V1 freeze 済み(frozen:true)。未凍結だと release 構成で VINTF マニフェストから除外されるため。
+aidl_interface {
+    name: "vendor.l01k.tv.rmp",
+    owner: "l01k",
+    vendor_available: true,
+    srcs: ["vendor/l01k/tv/rmp/*.aidl"],
+    stability: "vintf",
+    frozen: true,
+    backend: {
+        cpp: {
+            enabled: true,
+        },
+        ndk: {
+            enabled: true,
+        },
+        java: {
+            enabled: false,
+        },
+    },
+    versions_with_info: [
+        {
+            version: "1",
+            imports: [],
+        },
+    ],
+
+}

@@ -1,0 +1,25 @@
+# PROTECTED_ES producer HAL server(vendor)。rf_frontend + librmp(opaque) + secure demux。
+# client(l01ktv_player, coredomain)とは hal_attribute 属性経由の binder で結ぶ(直結の型参照はしない=#A解消)。
+type hal_l01ktv_rmp_default, domain;
+type hal_l01ktv_rmp_default_exec, exec_type, vendor_file_type, file_type;
+hal_server_domain(hal_l01ktv_rmp_default, hal_l01ktv_rmp)
+init_daemon_domain(hal_l01ktv_rmp_default)
+
+# servicemanager へ登録。client は find する(service型は public)。
+# binder_use: servicemanager への binder call(登録に必須。add_service だけでは call 不足=実機AVC #7)。
+binder_use(hal_l01ktv_rmp_default)
+add_service(hal_l01ktv_rmp_default, hal_l01ktv_rmp_service)
+# client への callback(onFrameReady 等)。client 型は名指しせず client 属性で許可。
+binder_call(hal_l01ktv_rmp_default, hal_l01ktv_rmp_client)
+
+# RF + secure demux
+allow hal_l01ktv_rmp_default { broadcast_isdbt_device demux_device dvr_device }:chr_file rw_file_perms;
+allow hal_l01ktv_rmp_default ion_device:chr_file rw_file_perms;
+# qseecom / librmp(TEE連携。中身は不透明、鍵は扱わない)
+allow hal_l01ktv_rmp_default tee_device:chr_file rw_file_perms;
+# RF/CAS 排他: clear backend と共有の rf.lock(l01ktv_state_file)。鍵/設定(l01ktv_config_file)には触れない。
+allow hal_l01ktv_rmp_default l01ktv_state_file:dir search;
+allow hal_l01ktv_rmp_default l01ktv_state_file:file { open read write lock };
+allow hal_l01ktv_rmp_default self:fifo_file rw_file_perms;
+# player 由来の保護バッファ FD(mediacodec が確保)の受領。map/read はしない。
+allow hal_l01ktv_rmp_default mediacodec:fd use;

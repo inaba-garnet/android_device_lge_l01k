@@ -7,4 +7,13 @@
             <instance>default</instance>
         </interface>
     </hal>
+    <!-- PROTECTED_ES producer HAL。player(system)が消費。device固有のためoptional。 -->
+    <hal format="aidl" optional="true">
+        <name>vendor.l01k.tv.rmp</name>
+        <version>1</version>
+        <interface>
+            <name>IRmpProducer</name>
+            <instance>default</instance>
+        </interface>
+    </hal>
 </compatibility-matrix>

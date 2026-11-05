@@ -1,0 +1,31 @@
+// PROTECTED_ES producer の vendor AIDL HAL service。in-tree ビルド(libbinder_ndk + AIDL をリンク)。
+// RF 部(rf_frontend.c)と Cコア(rmp_producer_core.c)を含め、このディレクトリが正本(../SOURCES.txt)。
+// linux/dvb/dmx.h は Qualcomm 拡張版(rf_include/)を bionic より先に引く。
+cc_binary {
+    name: "l01ktv_rmp_hal",
+    vendor: true,
+    relative_install_path: "hw",
+    compile_multilib: "64",
+    srcs: [
+        "rmp_hal_service.cpp",
+        "rmp_producer_core.c",
+        "rf_frontend.c",
+    ],
+    local_include_dirs: ["rf_include"],
+    include_dirs: ["kernel/lge/msm8998/drivers/broadcast/oneseg"],
+    shared_libs: [
+        "libbinder_ndk",
+        "liblog",
+    ],
+    static_libs: [
+        "vendor.l01k.tv.rmp-V1-ndk",
+    ],
+    c_std: "c11",
+    cflags: [
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+    ],
+    init_rc: ["l01ktv_rmp_hal.rc"],
+    vintf_fragments: ["l01ktv_rmp_hal.xml"],
+}

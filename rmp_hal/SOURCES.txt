@@ -1,0 +1,14 @@
+L-01K TV RMP 経路のソース正本(2026-11-05 Phase1 M2 で一本化)
+
+正本はこの git(device/lge/l01k)。他所に同名コピーを置かない。
+  rmp_hal/aidl/           vendor.l01k.tv.rmp(V1 frozen。aidl_api/1 と .hash は変更禁止)
+  rmp_hal/service/        l01ktv_rmp_hal(binder グルー + Cコア + RF frontend)
+    rf_frontend.{c,h}     RF 共通コア(FC8300 + Qualcomm DVB demux)。tuner_stream.c 由来の抽出。
+                          l01k-tv の standalone ツール(rawts 等)もここを参照してビルドする。
+    rf_include/linux/dvb/dmx.h  Qualcomm 拡張 dmx UAPI(research/tv-analysis/include 由来の参照用コピー)
+  rmp_player/             l01ktv_player(system 側 client)
+
+旧 direct-exec 方式(rf_secure + frame_ipc + socketpair)と旧 sepolicy 草案は
+/mnt/work/l01k/l01k-tv/archive/rmp-direct-exec/ に非稼働として隔離。ROM には入らない。
+
+同期の検査: /mnt/work/l01k/scripts/check_l01ktv_sources.sh(build_evolution.sh がビルド前に実行)。
