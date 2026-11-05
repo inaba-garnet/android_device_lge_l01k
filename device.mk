@@ -31,3 +31,6 @@ PRODUCT_SOONG_NAMESPACES += \
 
 # Inherit proprietary blobs
 $(call inherit-product, vendor/lge/l01k/l01k-vendor.mk)
+
+# ローカル開発構成(無ければ何もしない。公開ビルドでは置かない)
+$(call inherit-product-if-exists, vendor/l01k-local/l01k-local.mk)
